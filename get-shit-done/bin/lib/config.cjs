@@ -39,6 +39,7 @@ const VALID_CONFIG_KEYS = new Set([
   'routing.artifacts_dir',
   'workflow.review_before_execute',
   'workflow.ui_review',
+  'workflow.cross_review_after_execute',
 ]);
 
 /**
@@ -145,6 +146,7 @@ function buildNewProjectConfig(userChoices) {
       research_before_questions: false,
       discuss_mode: 'discuss',
       skip_discuss: false,
+      cross_review_after_execute: false,
     },
     hooks: {
       context_warnings: true,
