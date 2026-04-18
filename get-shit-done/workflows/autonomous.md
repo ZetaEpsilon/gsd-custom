@@ -16,7 +16,7 @@ Read all files referenced by the invoking prompt's execution_context before star
 
 ## 1. Initialize
 
-Parse `$ARGUMENTS` for `--from N`, `--to N`, `--only N`, and `--interactive` flags:
+Parse `$ARGUMENTS` for `--from N`, `--to N`, `--only N`, `--interactive`, and `--autoreview` flags:
 
 ```bash
 FROM_PHASE=""
@@ -38,6 +38,11 @@ fi
 INTERACTIVE=""
 if echo "$ARGUMENTS" | grep -q '\-\-interactive'; then
   INTERACTIVE="true"
+fi
+
+AUTOREVIEW=""
+if echo "$ARGUMENTS" | grep -q '\-\-autoreview'; then
+  AUTOREVIEW="true"
 fi
 ```
 
@@ -72,6 +77,7 @@ If `ONLY_PHASE` is set, display: `Single phase mode: Phase ${ONLY_PHASE}`
 Else if `FROM_PHASE` is set, display: `Starting from phase ${FROM_PHASE}`
 If `TO_PHASE` is set, display: `Stopping after phase ${TO_PHASE}`
 If `INTERACTIVE` is set, display: `Mode: Interactive (discuss inline, plan+execute in background)`
+If `AUTOREVIEW` is set, display: `Mode: Auto-review (cross-AI code review enabled after each phase execution)`
 
 </step>
 
@@ -371,18 +377,31 @@ Auto-invoke code review and fix chain. Autonomous mode chains both review and fi
 ```bash
 CODE_REVIEW_ENABLED=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.code_review 2>/dev/null || echo "true")
 ```
-If `"false"`: display "Code review skipped (workflow.code_review=false)" and proceed to 3d.
+If `"false"`: display "Code review skipped (workflow.code_review=false)" and proceed to 3c.6.
 
 ```
 Skill(skill="gsd:code-review", args="${PHASE_NUM}")
 ```
 
-Parse status from REVIEW.md frontmatter. If "clean" or "skipped": proceed to 3d. If findings found: auto-invoke:
+Parse status from REVIEW.md frontmatter. If "clean" or "skipped": proceed to 3c.6. If findings found: auto-invoke:
 ```
 Skill(skill="gsd:code-review-fix", args="${PHASE_NUM} --auto")
 ```
 
-**Error handling:** If either Skill fails, catch the error, display as non-blocking, and proceed to 3d.
+**Error handling:** If either Skill fails, catch the error, display as non-blocking, and proceed to 3c.6.
+
+**3c.6. Optional Cross-AI Review (`--autoreview`)**
+
+If `AUTOREVIEW` is not set: skip and proceed to 3d.
+
+If `AUTOREVIEW` is set, run:
+```
+Skill(skill="gsd:code-review-cross", args="${PHASE_NUM}")
+```
+
+This is advisory-only and must not block autonomous progression.
+
+**Error handling:** If cross review fails, catch the error, display as non-blocking, and proceed to 3d.
 
 **3d. Post-Execution Routing**
 
@@ -1061,4 +1080,5 @@ When any phase operation fails or a blocker is detected, present 3 options via A
 - [ ] `--interactive` main context only accumulates discuss conversations (lean)
 - [ ] `--interactive` waits for background agents before post-execution routing
 - [ ] `--interactive` compatible with `--only`, `--from`, and `--to` flags
+- [ ] `--autoreview` triggers `/gsd-code-review-cross` after phase execution (advisory, non-blocking)
 </success_criteria>
