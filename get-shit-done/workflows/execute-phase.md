@@ -57,6 +57,7 @@ Parse `$ARGUMENTS` before loading any context:
 - First positional token → `PHASE_ARG`
 - Optional `--wave N` → `WAVE_FILTER`
 - Optional `--gaps-only` keeps its current meaning
+- Optional `--cross-review` enables external cross-AI code review after local code review (advisory only)
 
 If `--wave` is absent, preserve the current behavior of executing all incomplete waves in the phase.
 </step>
@@ -830,7 +831,53 @@ Code review found issues. Consider running:
 
 **Error handling:** If the Skill invocation fails or throws, catch the error, display "Code review encountered an error (non-blocking): {error}" and proceed to next step. Review failures must never block execution.
 
-Regardless of review result, ALWAYS proceed to close_parent_artifacts → regression_gate → verify_phase_goal.
+Regardless of review result, ALWAYS proceed to cross_ai_code_review_gate → close_parent_artifacts → regression_gate → verify_phase_goal.
+</step>
+
+<step name="cross_ai_code_review_gate">
+Optional cross-AI post-execution code review. Advisory only — never blocks execution flow.
+
+Enable this step when either condition is true:
+1. `--cross-review` is present in `$ARGUMENTS`
+2. `workflow.cross_review_after_execute=true` in config
+
+Resolve config gate:
+```bash
+CROSS_REVIEW_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.cross_review_after_execute 2>/dev/null || echo "false")
+```
+
+Activation logic:
+- If `--cross-review` is present, run regardless of config.
+- Else run only if `CROSS_REVIEW_CFG` is `"true"`.
+- Otherwise skip silently and continue to `close_parent_artifacts`.
+
+Invoke:
+```
+Skill(skill="gsd:code-review-cross", args="${PHASE_NUMBER}")
+```
+
+Result check (deterministic path):
+```bash
+PADDED=$(printf "%02d" "${PHASE_NUMBER}")
+CROSS_REVIEW_FILE="${PHASE_DIR}/${PADDED}-REVIEW-CROSS.md"
+```
+
+If file exists, display:
+```
+Cross-AI review complete: ${PADDED}-REVIEW-CROSS.md
+```
+
+If file missing, display:
+```
+Cross-AI review did not produce an artifact (non-blocking).
+```
+
+Error handling: if Skill invocation fails, catch and display:
+```
+Cross-AI review encountered an error (non-blocking): {error}
+```
+
+Always proceed to `close_parent_artifacts`.
 </step>
 
 <step name="close_parent_artifacts">

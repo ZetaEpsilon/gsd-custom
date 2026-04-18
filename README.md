@@ -14,6 +14,7 @@ This repo intentionally contains only local customizations, keeping upstream fol
 
 - `agents/...` overrides
 - `get-shit-done/...` overrides
+- `skills/...` custom slash-command skills synced into `~/.claude/skills` by `scripts/pull.ps1`
 - No full upstream source tree
 
 ## Daily workflow
@@ -29,3 +30,7 @@ This repo intentionally contains only local customizations, keeping upstream fol
    - `powershell -ExecutionPolicy Bypass -File scripts/pull.ps1`
 3. In your Claude session, run `/gsd-reapply-patches` when prompted by GSD update flow.
 
+## Custom commands
+
+- `/gsd-code-review-cross <phase>` — cross-AI post-execution code review (Codex/Gemini/Claude/etc.)
+- `/gsd-execute-phase <phase> --cross-review` — run cross-AI review automatically after built-in code review
